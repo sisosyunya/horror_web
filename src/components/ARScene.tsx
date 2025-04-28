@@ -1,6 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import 'aframe';
-import 'ar.js';
 
 interface ARSceneProps {
     onSoundDetected: () => void;
@@ -28,7 +26,7 @@ const ARScene: React.FC<ARSceneProps> = ({ onSoundDetected }) => {
                         analyserRef.current.getByteFrequencyData(dataArray);
                         const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
 
-                        if (average > 50) { // 音量閾値の設定
+                        if (average > 50) {
                             onSoundDetected();
                         }
                     }
@@ -51,7 +49,10 @@ const ARScene: React.FC<ARSceneProps> = ({ onSoundDetected }) => {
     }, [onSoundDetected]);
 
     return (
-        <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+        <a-scene
+            embedded
+            arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; matrixCodeType: 3x3;"
+        >
             <a-marker preset="hiro">
                 <a-box position="0 0.5 0" material="color: red;"></a-box>
             </a-marker>
