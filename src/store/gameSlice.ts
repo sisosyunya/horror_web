@@ -1,15 +1,26 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+interface TreasureBox {
+    x: number;
+    y: number;
+    z: number;
+    found: boolean;
+}
+
 interface GameState {
-    isMonsterActive: boolean;
-    playerHealth: number;
-    score: number;
+    monsterProximity: number;
+    treasureBoxes: TreasureBox[];
+    isGameStarted: boolean;
 }
 
 const initialState: GameState = {
-    isMonsterActive: false,
-    playerHealth: 100,
-    score: 0,
+    monsterProximity: 0,
+    treasureBoxes: [
+        { x: 1, y: 0, z: -2, found: false },
+        { x: -1, y: 0, z: -2, found: false },
+        { x: 0, y: 0, z: -3, found: false }
+    ],
+    isGameStarted: false
 };
 
 const gameSlice = createSlice({
@@ -17,31 +28,22 @@ const gameSlice = createSlice({
     initialState,
     reducers: {
         activateMonster: (state) => {
-            state.isMonsterActive = true;
+            state.monsterProximity = Math.min(state.monsterProximity + 50, 200);
         },
         deactivateMonster: (state) => {
-            state.isMonsterActive = false;
+            state.monsterProximity = Math.max(state.monsterProximity - 10, 0);
         },
-        decreaseHealth: (state, action: PayloadAction<number>) => {
-            state.playerHealth = Math.max(0, state.playerHealth - action.payload);
+        updateDistance: (state, action: PayloadAction<number>) => {
+            state.monsterProximity = Math.max(0, state.monsterProximity - action.payload);
         },
-        increaseScore: (state, action: PayloadAction<number>) => {
-            state.score += action.payload;
+        findTreasure: (state, action: PayloadAction<number>) => {
+            state.treasureBoxes[action.payload].found = true;
         },
-        resetGame: (state) => {
-            state.isMonsterActive = false;
-            state.playerHealth = 100;
-            state.score = 0;
-        },
-    },
+        startGame: (state) => {
+            state.isGameStarted = true;
+        }
+    }
 });
 
-export const {
-    activateMonster,
-    deactivateMonster,
-    decreaseHealth,
-    increaseScore,
-    resetGame,
-} = gameSlice.actions;
-
+export const { activateMonster, deactivateMonster, updateDistance, findTreasure, startGame } = gameSlice.actions;
 export default gameSlice.reducer; 
