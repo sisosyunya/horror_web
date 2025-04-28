@@ -10,7 +10,7 @@ import './App.css';
 
 const GameUI: React.FC = () => {
   const dispatch = useDispatch();
-  const { playerHealth, score, isMonsterActive } = useSelector((state: RootState) => state.game);
+  const { isMonsterActive } = useSelector((state: RootState) => state.game);
 
   const handleSoundDetected = () => {
     dispatch(activateMonster());
@@ -19,12 +19,6 @@ const GameUI: React.FC = () => {
   return (
     <Container>
       <Box sx={{ position: 'fixed', top: 20, left: 20, zIndex: 1000 }}>
-        <Typography variant="h6" color="white">
-          体力: {playerHealth}
-        </Typography>
-        <Typography variant="h6" color="white">
-          スコア: {score}
-        </Typography>
         {isMonsterActive && (
           <Typography variant="h6" color="red">
             ！危険！モンスターが接近中
@@ -39,7 +33,9 @@ const GameUI: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Provider store={store}>
-      <GameUI />
+      <div className="App">
+        <ARScene onSoundDetected={() => { }} />
+      </div>
     </Provider>
   );
 };

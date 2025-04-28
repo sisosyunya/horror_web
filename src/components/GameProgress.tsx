@@ -1,6 +1,6 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
-import { RootState } from '../store/gameSlice';
+import { RootState } from '../store/store';
 
 const GameProgress: React.FC = () => {
     const { treasureBoxes, monsterProximity } = useSelector((state: RootState) => state.game);

@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../store/store';
 import { findTreasure } from '../store/gameSlice';
-import 'aframe';
-import 'aframe-ar';
 
 interface ARSceneManagerProps {
     cameraStream: MediaStream | null;
@@ -12,92 +10,186 @@ interface ARSceneManagerProps {
 const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
     const dispatch = useDispatch();
     const { monsterProximity, treasureBoxes } = useSelector((state: RootState) => state.game);
-    const sceneRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [isSceneLoaded, setIsSceneLoaded] = useState(false);
-    const sceneInstanceRef = useRef<HTMLElement | null>(null);
+    const aframeScriptLoaded = useRef(false);
+    const arjsScriptLoaded = useRef(false);
 
+    // スクリプトの読み込み
     useEffect(() => {
-        if (!window.AFRAME || !sceneRef.current || !cameraStream) return;
+        if (aframeScriptLoaded.current && arjsScriptLoaded.current) return;
 
-        // 既存のシーンをクリア
-        if (sceneInstanceRef.current) {
-            sceneInstanceRef.current.parentNode?.removeChild(sceneInstanceRef.current);
-            sceneInstanceRef.current = null;
-        }
+        const loadScripts = async () => {
+            // A-Frame スクリプトの読み込み
+            if (!aframeScriptLoaded.current) {
+                const aframeScript = document.createElement('script');
+                aframeScript.src = 'https://aframe.io/releases/1.2.0/aframe.min.js';
+                aframeScript.async = true;
+                aframeScript.onload = () => {
+                    console.log('A-Frame スクリプトが読み込まれました');
+                    aframeScriptLoaded.current = true;
 
-        // シーンの作成
-        const scene = document.createElement('a-scene');
-        scene.setAttribute('embedded', '');
-        scene.setAttribute('arjs', 'sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;');
-        scene.setAttribute('vr-mode-ui', 'enabled: false');
-        scene.setAttribute('renderer', 'logarithmicDepthBuffer: true;');
-        scene.setAttribute('loading-screen', 'enabled: false');
+                    // AR.js スクリプトの読み込み (A-Frameの後)
+                    if (!arjsScriptLoaded.current) {
+                        const arjsScript = document.createElement('script');
+                        arjsScript.src = 'https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js';
+                        arjsScript.async = true;
+                        arjsScript.onload = () => {
+                            console.log('AR.js スクリプトが読み込まれました');
+                            arjsScriptLoaded.current = true;
 
-        // カメラの追加
-        const camera = document.createElement('a-entity');
-        camera.setAttribute('camera', '');
-        camera.setAttribute('position', '0 0 0');
-        camera.setAttribute('look-controls', 'enabled: false');
-        camera.setAttribute('arjs-device-orientation-controls', 'smoothingFactor: 0.8');
-        scene.appendChild(camera);
-
-        // モンスターの追加
-        if (monsterProximity > 0) {
-            const monsterEntity = document.createElement('a-entity');
-            monsterEntity.setAttribute('position', `0 ${1 + monsterProximity / 100} -${3 - monsterProximity / 50}`);
-
-            // シンプルなモンスターの表示
-            const monsterBody = document.createElement('a-sphere');
-            monsterBody.setAttribute('radius', '0.5');
-            monsterBody.setAttribute('material', 'color: #FF0000; opacity: 0.8');
-            monsterBody.setAttribute('animation', 'property: scale; to: 1.2 1.2 1.2; dur: 1000; dir: alternate; loop: true');
-            monsterEntity.appendChild(monsterBody);
-            scene.appendChild(monsterEntity);
-        }
-
-        // 宝箱の追加
-        treasureBoxes.forEach((box, index) => {
-            if (!box.found) {
-                const treasureEntity = document.createElement('a-entity');
-                treasureEntity.setAttribute('position', `${box.x} ${box.y} ${box.z}`);
-
-                // シンプルな宝箱の表示
-                const treasureBox = document.createElement('a-box');
-                treasureBox.setAttribute('width', '0.4');
-                treasureBox.setAttribute('height', '0.4');
-                treasureBox.setAttribute('depth', '0.4');
-                treasureBox.setAttribute('material', 'color: #FFD700');
-                treasureBox.setAttribute('animation', 'property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true');
-                treasureBox.setAttribute('class', 'clickable');
-                treasureBox.setAttribute('data-treasure-index', index.toString());
-                treasureBox.addEventListener('click', () => dispatch(findTreasure(index)));
-                treasureEntity.appendChild(treasureBox);
-                scene.appendChild(treasureEntity);
-            }
-        });
-
-        // シーンの追加
-        sceneRef.current.appendChild(scene);
-        sceneInstanceRef.current = scene;
-
-        // シーンの読み込み完了を監視
-        scene.addEventListener('loaded', () => {
-            setIsSceneLoaded(true);
-        });
-
-        return () => {
-            if (sceneInstanceRef.current) {
-                sceneInstanceRef.current.parentNode?.removeChild(sceneInstanceRef.current);
-                sceneInstanceRef.current = null;
-                setIsSceneLoaded(false);
+                            // 両方のスクリプトが読み込まれた後、iframeを作成
+                            createARIframe();
+                        };
+                        document.head.appendChild(arjsScript);
+                    }
+                };
+                document.head.appendChild(aframeScript);
             }
         };
-    }, [monsterProximity, treasureBoxes, dispatch, cameraStream]);
+
+        loadScripts();
+    }, []);
+
+    // AR用のiframeを作成
+    const createARIframe = () => {
+        if (!containerRef.current) return;
+
+        // 既存のiframeをクリア
+        containerRef.current.innerHTML = '';
+
+        // iframeを作成
+        const iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.allow = 'camera; microphone; accelerometer; gyroscope';
+
+        containerRef.current.appendChild(iframe);
+
+        // iframe内のドキュメントにARシーンを構築
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDoc) return;
+
+        // HTML構造を作成
+        iframeDoc.open();
+        iframeDoc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>AR Experience</title>
+                <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+                <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+                <style>
+                    body { margin: 0; overflow: hidden; }
+                    .a-enter-vr { display: none; }
+                </style>
+                <script>
+                    // 親ウィンドウとの通信
+                    function handleBoxClick(index) {
+                        window.parent.postMessage({ type: 'box-click', index: index }, '*');
+                    }
+                    
+                    // GLTFのローディングエラーをハンドル
+                    AFRAME.registerComponent('model-error', {
+                        init: function() {
+                            this.el.addEventListener('model-error', function(e) {
+                                console.error('モデルの読み込みに失敗:', e.detail);
+                            });
+                        }
+                    });
+                </script>
+            </head>
+            <body>
+                <a-scene
+                    embedded
+                    arjs="sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+                    vr-mode-ui="enabled: false"
+                    renderer="logarithmicDepthBuffer: true;"
+                    loading-screen="enabled: false">
+                    
+                    <a-assets>
+                        <a-asset-item id="ghost-model" src="/models/ghost.glb"></a-asset-item>
+                        <a-asset-item id="chest-model" src="/models/chest.glb"></a-asset-item>
+                    </a-assets>
+                    
+                    <a-entity camera position="0 0 0" look-controls="enabled: false"></a-entity>
+                    
+                    <a-marker preset="hiro">
+                        ${monsterProximity > 0 ? `
+                            <a-entity 
+                                position="0 ${1 + monsterProximity / 100} -${3 - monsterProximity / 50}"
+                                scale="0.5 0.5 0.5"
+                                rotation="0 0 0">
+                                <a-entity
+                                    gltf-model="#ghost-model"
+                                    model-error
+                                    animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                                </a-entity>
+                            </a-entity>
+                        ` : ''}
+                        
+                        ${treasureBoxes.map((box, index) => !box.found ? `
+                            <a-entity 
+                                position="${box.x} ${box.y} ${box.z}"
+                                scale="0.5 0.5 0.5"
+                                rotation="0 0 0"
+                                data-index="${index}"
+                                onclick="handleBoxClick(${index})">
+                                <a-entity
+                                    gltf-model="#chest-model"
+                                    model-error
+                                    animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                                </a-entity>
+                            </a-entity>
+                        ` : '').join('')}
+                    </a-marker>
+                </a-scene>
+            </body>
+            </html>
+        `);
+        iframeDoc.close();
+
+        // iframeの読み込み完了を監視
+        iframe.onload = () => {
+            console.log('ARシーンが読み込まれました');
+            setIsSceneLoaded(true);
+        };
+
+        // 5秒後にタイムアウト
+        setTimeout(() => {
+            setIsSceneLoaded(true);
+        }, 5000);
+    };
+
+    // 宝箱クリックイベントのリスナー
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'box-click') {
+                dispatch(findTreasure(event.data.index));
+                console.log(`宝箱 ${event.data.index} がクリックされました`);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, [dispatch]);
+
+    // 状態が変わったらiframeを更新
+    useEffect(() => {
+        if (aframeScriptLoaded.current && arjsScriptLoaded.current) {
+            createARIframe();
+        }
+    }, [monsterProximity, treasureBoxes]);
 
     return (
         <>
             <div
-                ref={sceneRef}
+                ref={containerRef}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -114,9 +206,16 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                     transform: 'translate(-50%, -50%)',
                     color: 'white',
                     fontSize: '1.2em',
-                    zIndex: 2
+                    zIndex: 2,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    padding: '20px',
+                    borderRadius: '10px',
+                    textAlign: 'center'
                 }}>
                     ARシーンを読み込み中...
+                    <div style={{ marginTop: '10px', fontSize: '0.8em' }}>
+                        カメラの初期化に時間がかかっている場合があります
+                    </div>
                 </div>
             )}
         </>
