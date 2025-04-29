@@ -6,13 +6,13 @@ import { TreasureBoxManager } from './TreasureBoxManager';
 import ARDebugPanel from './ARDebugPanel';
 
 interface ARSceneManagerProps {
-    cameraStream: MediaStream | null;
+    // cameraStreamプロパティを削除
 }
 
 /**
  * ARシーンを管理するコンポーネント
  */
-const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
+const ARSceneManager: React.FC<ARSceneManagerProps> = () => {
     const dispatch = useDispatch();
     const { monsterProximity, treasureBoxes } = useSelector((state: RootState) => state.game);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -114,8 +114,8 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             // 宝箱マネージャーがあればイベント処理を委譲
-            if (treasureBoxManagerRef.current) {
-                treasureBoxManagerRef.current.handleMessage(event, containerRef);
+            if (treasureBoxManagerRef.current && containerRef.current) {
+                treasureBoxManagerRef.current.handleMessage(event, { current: containerRef.current });
             }
         };
 

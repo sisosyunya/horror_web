@@ -91,6 +91,11 @@ export const loadARScripts = (): Promise<{ aframeLoaded: boolean, arjsLoaded: bo
 };
 
 /**
+ * 宝箱表示の閾値を極限まで小さく設定します
+ */
+export const TREASURE_VISIBILITY_THRESHOLD = 0.1;
+
+/**
  * ARシーン用のHTMLコンテンツを生成します
  * @param monsterProximity モンスターの接近度
  * @param treasureBoxes 宝箱の配列

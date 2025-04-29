@@ -15,10 +15,10 @@ import ARSceneManager from './ar/ARSceneManager';
 import GameClear from './GameClear';
 
 interface ARSceneProps {
-    onSoundDetected: () => void;
+    onSoundDetected?: () => void;
 }
 
-const ARScene: React.FC<ARSceneProps> = ({ onSoundDetected }) => {
+const ARScene: React.FC<ARSceneProps> = () => {
     const dispatch = useDispatch();
     const { monsterProximity, isGameStarted, treasureBoxes } = useSelector((state: RootState) => state.game);
     const audioContextRef = useRef<AudioContext | null>(null);
@@ -215,7 +215,7 @@ const ARScene: React.FC<ARSceneProps> = ({ onSoundDetected }) => {
                     zIndex: 1
                 }}
             />
-            <ARSceneManager cameraStream={cameraStream} />
+            <ARSceneManager />
             {!hasCameraPermission && (
                 <div style={{
                     position: 'fixed',
