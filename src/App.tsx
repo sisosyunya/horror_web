@@ -10,7 +10,7 @@ import './App.css';
 
 const GameUI: React.FC = () => {
   const dispatch = useDispatch();
-  const { isMonsterActive } = useSelector((state: RootState) => state.game);
+  const { monsterProximity } = useSelector((state: RootState) => state.game);
 
   const handleSoundDetected = () => {
     dispatch(activateMonster());
@@ -19,7 +19,7 @@ const GameUI: React.FC = () => {
   return (
     <Container>
       <Box sx={{ position: 'fixed', top: 20, left: 20, zIndex: 1000 }}>
-        {isMonsterActive && (
+        {monsterProximity > 0 && (
           <Typography variant="h6" color="red">
             ！危険！モンスターが接近中
           </Typography>

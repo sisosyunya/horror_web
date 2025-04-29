@@ -87,10 +87,30 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                     .a-enter-vr { display: none; }
                 </style>
                 <script>
-                    // 親ウィンドウとの通信
-                    function handleBoxClick(index) {
-                        window.parent.postMessage({ type: 'box-click', index: index }, '*');
-                    }
+                    // カスタムクリックコンポーネント
+                    AFRAME.registerComponent('treasure-box', {
+                        schema: {
+                            index: {type: 'number', default: 0}
+                        },
+                        init: function() {
+                            this.el.addEventListener('click', () => {
+                                console.log('宝箱クリック: ' + this.data.index);
+                                window.parent.postMessage({ 
+                                    type: 'box-click', 
+                                    index: this.data.index 
+                                }, '*');
+                            });
+                            
+                            // タッチデバイス用
+                            this.el.addEventListener('touchend', () => {
+                                console.log('宝箱タッチ: ' + this.data.index);
+                                window.parent.postMessage({ 
+                                    type: 'box-click', 
+                                    index: this.data.index 
+                                }, '*');
+                            });
+                        }
+                    });
                     
                     // GLTFのローディングエラーをハンドル
                     AFRAME.registerComponent('model-error', {
@@ -99,6 +119,15 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                                 console.error('モデルの読み込みに失敗:', e.detail);
                             });
                         }
+                    });
+
+                    // デバッグ用：シーン読み込み完了時のイベント
+                    window.addEventListener('load', function() {
+                        console.log('ARシーンのDOM読み込み完了');
+                    });
+
+                    document.addEventListener('DOMContentLoaded', function() {
+                        console.log('ARシーンのDOM読み込み完了');
                     });
                 </script>
             </head>
@@ -115,7 +144,30 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                         <a-asset-item id="chest-model" src="/models/chest.glb"></a-asset-item>
                     </a-assets>
                     
-                    <a-entity camera position="0 0 0" look-controls="enabled: false"></a-entity>
+                    <a-entity camera position="0 0 0" look-controls="enabled: false">
+                        <a-entity 
+                            cursor="fuse: false; rayOrigin: mouse;"
+                            raycaster="objects: .clickable; far: 100"
+                            position="0 0 -1"
+                            geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                            material="color: white; shader: flat"
+                            visible="false">
+                        </a-entity>
+                    </a-entity>
+                    
+                    <!-- デモ用のチェスト（マーカーなしで表示） -->
+                    <a-entity 
+                        position="0 0 -3"
+                        scale="0.5 0.5 0.5"
+                        rotation="0 0 0"
+                        class="clickable"
+                        treasure-box="index: 999">
+                        <a-entity
+                            gltf-model="#chest-model"
+                            model-error
+                            animation="property: rotation; to: 0 360 0; dur: 5000; easing: linear; loop: true">
+                        </a-entity>
+                    </a-entity>
                     
                     <a-marker preset="hiro">
                         ${monsterProximity > 0 ? `
@@ -136,8 +188,8 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                                 position="${box.x} ${box.y} ${box.z}"
                                 scale="0.5 0.5 0.5"
                                 rotation="0 0 0"
-                                data-index="${index}"
-                                onclick="handleBoxClick(${index})">
+                                class="clickable"
+                                treasure-box="index: ${index}">
                                 <a-entity
                                     gltf-model="#chest-model"
                                     model-error
@@ -147,6 +199,25 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
                         ` : '').join('')}
                     </a-marker>
                 </a-scene>
+
+                <script>
+                    // デバッグ用のイベント表示
+                    document.addEventListener('click', function(event) {
+                        console.log('ドキュメントクリック:', event.target);
+                    });
+                    
+                    // シーン読み込み完了時の処理
+                    const scene = document.querySelector('a-scene');
+                    if (scene) {
+                        if (scene.hasLoaded) {
+                            console.log('シーンはすでに読み込み完了しています');
+                        } else {
+                            scene.addEventListener('loaded', function() {
+                                console.log('シーンの読み込みが完了しました');
+                            });
+                        }
+                    }
+                </script>
             </body>
             </html>
         `);
@@ -168,6 +239,11 @@ const ARSceneManager: React.FC<ARSceneManagerProps> = ({ cameraStream }) => {
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
             if (event.data.type === 'box-click') {
+                console.log('メッセージ受信:', event.data);
+                if (event.data.index === 999) {
+                    console.log('デモ用宝箱がクリックされました');
+                    return;
+                }
                 dispatch(findTreasure(event.data.index));
                 console.log(`宝箱 ${event.data.index} がクリックされました`);
             }

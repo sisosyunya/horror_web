@@ -27,7 +27,7 @@ const GameStart: React.FC = () => {
                 marginBottom: '20px',
                 color: '#FFD700'
             }}>
-                AKIYA QUIET HOUSE
+                ホラメンテ
             </h1>
             <div style={{
                 maxWidth: '600px',
